@@ -1,0 +1,117 @@
+import numpy as np
+import pandas as pd
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    classification_report,
+    confusion_matrix
+)
+from sklearn.impute import SimpleImputer
+import joblib
+
+# Load dataset
+iris = load_iris()
+X = pd.DataFrame(iris.data, columns=iris.feature_names)
+y = pd.Series(iris.target)
+
+# Handle missing values (if any)
+imputer = SimpleImputer(strategy='mean')
+X_imputed = imputer.fit_transform(X)
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X_imputed, y, test_size=0.2, random_state=42)
+
+# Train Decision Tree
+clf = DecisionTreeClassifier(random_state=42)
+clf.fit(X_train, y_train)
+
+# Evaluate
+y_pred = clf.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+prec = precision_score(y_test, y_pred, average='macro')
+rec = recall_score(y_test, y_pred, average='macro')
+
+print('Accuracy:', acc)
+print('Precision:', prec)
+print('Recall:', rec)
+print("Classification Report:\n", classification_report(y_test, y_pred))
+print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+# Save model
+joblib.dump(clf, 'iris_decision_tree.joblib')
+
+try:
+    import tensorflow as tf
+    from tensorflow.keras import layers, models # type: ignore
+
+    # Load the MNIST dataset
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+    print("MNIST dataset loaded successfully!")
+    print("Training data shape:", x_train.shape)
+    print("Testing data shape:", x_test.shape)
+
+    # Normalize
+    x_train, x_test = x_train / 255.0, x_test / 255.0
+    x_train = np.expand_dims(x_train, -1)
+    x_test = np.expand_dims(x_test, -1)
+
+    model = models.Sequential([
+        layers.Conv2D(32, (3,3), activation='relu', input_shape=(28,28,1)),
+        layers.MaxPooling2D((2,2)),
+        layers.Conv2D(64, (3,3), activation='relu'),
+        layers.MaxPooling2D((2,2)),
+        layers.Flatten(),
+        layers.Dense(64, activation='relu'),
+        layers.Dense(10, activation='softmax')
+    ])
+
+    model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
+
+    test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+    print(f'Test Accuracy: {test_acc:.4f}')
+    model.save('mnist_cnn.h5')
+
+except Exception as e:
+    print('TensorFlow or MNIST dataset not available in this environment.')
+    print('Install TensorFlow locally using: pip install tensorflow')
+    print('Error:', e)
+    
+    # Try loading spaCy as a fallback
+    try:
+        import spacy
+        nlp = spacy.load('en_core_web_sm')
+        print("spaCy model loaded successfully.")
+        
+        reviews = [
+            'The new Samsung Galaxy phone has excellent battery life!',
+            'I love my Apple iPhone but it was quite expensive.',
+            'The Sony headphones broke after a week. Very disappointing.'
+        ]
+
+        for review in reviews:
+            doc = nlp(review)
+            print(f'Review: {review}')
+            print('Entities:', [(ent.text, ent.label_) for ent in doc.ents])
+
+        positive_words = ['love', 'excellent', 'great', 'good']
+        negative_words = ['bad', 'expensive', 'disappointing', 'broke']
+
+        def rule_based_sentiment(text):
+            score = sum(word in text.lower() for word in positive_words) - sum(word in text.lower() for word in negative_words)
+            return 'Positive' if score > 0 else 'Negative' if score < 0 else 'Neutral'
+
+        for r in reviews:
+            print(f'Review: {r}')
+            print(f'Sentiment: {rule_based_sentiment(r)}')
+
+    except Exception as inner_e:
+        print("spaCy is not available.")
+        print("Install spaCy locally using: pip install spacy && python -m spacy download en_core_web_sm")
+        print("Error:", inner_e)
